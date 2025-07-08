@@ -3,6 +3,7 @@ package kotlin1.kopring.service
 import kotlin1.kopring.Dto.ResponseDto
 import mu.KotlinLogging
 import org.json.JSONArray
+import org.json.JSONObject
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import java.util.*
@@ -90,20 +91,30 @@ class RepoService (
         fileName: String,
         username : String,
         token : String,
-    ){
+    ) : ResponseDto<String> {
         val url = "$baseUrl/repos/$username/$repoName/contents/$fileName"
-        val result = webClient.get()
+        val result  = webClient.get()
             .uri(url)
             .header("authorization", "Bearer $token")
             .retrieve()
             .bodyToMono(String::class.java)
             .block()
 
-        logger.info(decodeBASE64(result!!))
+        val jsonObject = JSONObject(result)
+        val byte : String = jsonObject.get("content").toString()
+        val code = decodeBASE64(byte)
+        logger.info { code }
+
+        return ResponseDto(
+            status = 200,
+            message = "content",
+            data = code
+        )
     }
 
-    fun decodeBASE64(encodedString : String) : String{
-        encodedString.replace("\\s+".toRegex(), "")
-        return Base64.getDecoder().decode(encodedString).decodeToString()
+    fun decodeBASE64(base64: String): String {
+        val cleaned = base64.replace("\n", "")
+        val decodedBytes = Base64.getDecoder().decode(cleaned)
+        return String(decodedBytes, Charsets.UTF_8)
     }
 }

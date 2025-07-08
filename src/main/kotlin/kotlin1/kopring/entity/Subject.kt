@@ -13,7 +13,7 @@ class Subject (
     open val id : Long = 0,
 
     @Column(nullable = false, name = "subject_name")
-    open val subjectName : String = "",
+    open val repositoryName : String = "",
 
     @Column(name = "created_date")
     open val date : LocalDate = LocalDate.now(),

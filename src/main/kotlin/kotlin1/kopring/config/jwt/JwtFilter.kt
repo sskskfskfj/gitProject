@@ -36,8 +36,8 @@ class JwtFilter (
                 )
                 val oAuth2User = CustomOauth2User(user, userAttribute, accessToken)
                 val auth = OAuth2AuthenticationToken(
-                    oAuth2User,
-                    oAuth2User.authorities,
+                    oAuth2User, // principal
+                    oAuth2User.authorities, // authorities
                     "github"
                 )
                 SecurityContextHolder.getContext().authentication = auth

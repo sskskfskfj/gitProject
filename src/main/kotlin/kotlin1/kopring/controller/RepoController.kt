@@ -6,9 +6,11 @@ import mu.KotlinLogging
 import net.minidev.json.JSONObject
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.Authentication
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
 import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.reactive.function.client.WebClient
@@ -24,12 +26,11 @@ class RepoController(
 ) {
     @GetMapping("/get")
     fun getRepos(
-        @AuthenticationPrincipal oAuth2User: OAuth2User?,
+        auth : Authentication,
         @RequestParam(value = "number", required = false) number: Int,
     ) : ResponseEntity<Any>{
-        oAuth2User ?: return ResponseEntity.status(401).body("로그인을 먼저 진행해주세요")
 
-        val accessToken = getUserTokenFromPrincipal(oAuth2User)["token"] as String
+        val accessToken = getUserTokenFromPrincipal(auth)["token"] as String
 
         val repos = webClient.get()
             .uri("user/repos?page=$number&per_page=5")
@@ -45,36 +46,36 @@ class RepoController(
 
     @GetMapping("/page")
     fun getSinglePages(
-        @AuthenticationPrincipal oAuth2User: OAuth2User,
+        auth : Authentication,
         @RequestParam(value = "repo", required = true) repoName : String,
     ) : ResponseEntity<Any>{
-        val accessToken = getUserTokenFromPrincipal(oAuth2User)["token"] as String
-        val username = getUserTokenFromPrincipal(oAuth2User)["username"] as String
+        val accessToken = getUserTokenFromPrincipal(auth)["token"] as String
+        val username = getUserTokenFromPrincipal(auth)["username"] as String
 
         return ResponseEntity.ok().body(repoService.getAllPagesInRepo(username, accessToken, repoName))
     }
 
     @GetMapping("/{repo}/{file}")
     fun getSingleFile(
-        @AuthenticationPrincipal oAuth2User: OAuth2User,
-        @PathVariable("file") fileName: String,
-        @PathVariable("repo") repoName: String,
+        auth : Authentication,
+        @PathVariable file: String,
+        @PathVariable repo: String,
     ) : ResponseEntity<Any>{
-        val accessToken = getUserTokenFromPrincipal(oAuth2User)["token"] as String
-        val username = getUserTokenFromPrincipal(oAuth2User)["username"] as String
+        val accessToken = getUserTokenFromPrincipal(auth)["token"] as String
+        val username = getUserTokenFromPrincipal(auth)["username"] as String
 
         return ResponseEntity.ok().body(repoService.getContent(
-            repoName, fileName, username, accessToken
+            repo, file, username, accessToken
         ))
     }
 
-    fun getUserTokenFromPrincipal(oAuth2User: OAuth2User) : Map<String, String> {
-        val user = oAuth2User as CustomOauth2User
-        val token = user.getToken()
-        val username = user.name
+    fun getUserTokenFromPrincipal(auth: Authentication) : Map<String, String> {
+        val authentication = auth as OAuth2AuthenticationToken
+        val user = authentication.principal as CustomOauth2User
+
         return mapOf(
-            "username" to username,
-            "token" to token
+            "username" to user.getNickname(),
+            "token" to user.getToken()
         )
     }
 }
