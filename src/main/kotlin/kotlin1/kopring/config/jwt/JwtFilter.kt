@@ -4,12 +4,15 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import kotlin1.kopring.Dto.CustomOauth2User
+import org.springframework.http.HttpHeaders
 import kotlin1.kopring.repository.UserRepository
+import mu.KotlinLogging
 import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
+
+private val logger = KotlinLogging.logger {}
 
 @Component
 class JwtFilter (
@@ -21,28 +24,35 @@ class JwtFilter (
         response: HttpServletResponse,
         filterChain: FilterChain
     ) {
-        val authHeader = request.getHeader("Authorization")
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            val token = authHeader.substring(7).trim()
+
+        logger.info("jwt filter trigger")
+        val header = request.getHeader(HttpHeaders.AUTHORIZATION)
+
+        if(header != null && header.startsWith("Bearer ")){
+            val token = header.substring(7).trim()
+            logger.info(jwtProvider.getGithubId(token))
+
             if(jwtProvider.validToken(token)){
                 val githubId = jwtProvider.getGithubId(token)
-                val user = userRepository.findByGithubId(githubId)?: throw UsernameNotFoundException("User not found")
-                val accessToken = jwtProvider.getAccessToken(token)
 
-                val userAttribute : Map<String, Any> = mapOf(
-                    "githubId" to user.githubId,
-                    "username" to user.username,
-                    "email" to user.email!!
+                val user = userRepository.findByGithubId(githubId)
+                val attributes = mapOf(
+                    "username" to user!!.username,
+                    "githubId" to githubId,
                 )
-                val oAuth2User = CustomOauth2User(user, userAttribute, accessToken)
-                val auth = OAuth2AuthenticationToken(
-                    oAuth2User, // principal
-                    oAuth2User.authorities, // authorities
+
+                val oAuth2User = CustomOauth2User(user, attributes, jwtProvider.getAccessToken(token))
+                val authenticatedUser = OAuth2AuthenticationToken(
+                    oAuth2User,
+                    oAuth2User.authorities,
                     "github"
                 )
-                SecurityContextHolder.getContext().authentication = auth
+
+                SecurityContextHolder.getContext().authentication = authenticatedUser
             }
         }
         filterChain.doFilter(request, response)
     }
+
+
 }

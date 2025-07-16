@@ -1,5 +1,6 @@
 package kotlin1.kopring.service
 
+import jakarta.transaction.Transactional
 import kotlin1.kopring.Dto.CustomOauth2User
 import kotlin1.kopring.config.jwt.JwtProvider
 import kotlin1.kopring.entity.UserEntity
@@ -23,6 +24,7 @@ class CustomOauth2UserService (
     private val userRepository : UserRepository
 ) : OAuth2UserService<OAuth2UserRequest, OAuth2User>{
 
+    @Transactional
     override fun loadUser(userRequest: OAuth2UserRequest?): OAuth2User? {
         logger.info { "loadUser trigger" }
 

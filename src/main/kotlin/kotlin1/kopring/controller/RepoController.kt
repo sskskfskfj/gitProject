@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
 import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken
@@ -26,11 +27,10 @@ class RepoController(
 ) {
     @GetMapping("/get")
     fun getRepos(
-        auth : Authentication,
         @RequestParam(value = "number", required = false) number: Int,
     ) : ResponseEntity<Any>{
 
-        val accessToken = getUserTokenFromPrincipal(auth)["token"] as String
+        val accessToken = getUserTokenFromPrincipal()["token"] as String
 
         val repos = webClient.get()
             .uri("user/repos?page=$number&per_page=5")
@@ -46,32 +46,30 @@ class RepoController(
 
     @GetMapping("/page")
     fun getSinglePages(
-        auth : Authentication,
         @RequestParam(value = "repo", required = true) repoName : String,
     ) : ResponseEntity<Any>{
-        val accessToken = getUserTokenFromPrincipal(auth)["token"] as String
-        val username = getUserTokenFromPrincipal(auth)["username"] as String
+        val accessToken = getUserTokenFromPrincipal()["token"] as String
+        val username = getUserTokenFromPrincipal()["username"] as String
 
         return ResponseEntity.ok().body(repoService.getAllPagesInRepo(username, accessToken, repoName))
     }
 
     @GetMapping("/{repo}/{file}")
     fun getSingleFile(
-        auth : Authentication,
         @PathVariable file: String,
         @PathVariable repo: String,
     ) : ResponseEntity<Any>{
-        val accessToken = getUserTokenFromPrincipal(auth)["token"] as String
-        val username = getUserTokenFromPrincipal(auth)["username"] as String
+        val accessToken = getUserTokenFromPrincipal()["token"] as String
+        val username = getUserTokenFromPrincipal()["username"] as String
 
         return ResponseEntity.ok().body(repoService.getContent(
             repo, file, username, accessToken
         ))
     }
 
-    fun getUserTokenFromPrincipal(auth: Authentication) : Map<String, String> {
-        val authentication = auth as OAuth2AuthenticationToken
-        val user = authentication.principal as CustomOauth2User
+    fun getUserTokenFromPrincipal() : Map<String, String> {
+        val principal = SecurityContextHolder.getContext().authentication as OAuth2AuthenticationToken
+        val user = principal.principal as CustomOauth2User
 
         return mapOf(
             "username" to user.getNickname(),

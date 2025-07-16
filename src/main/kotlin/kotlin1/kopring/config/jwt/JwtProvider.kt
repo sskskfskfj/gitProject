@@ -6,18 +6,22 @@ import io.jsonwebtoken.SignatureAlgorithm
 import org.springframework.stereotype.Component
 import io.jsonwebtoken.security.Keys
 import kotlin1.kopring.entity.UserEntity
+import mu.KotlinLogging
 import java.util.*
+
+private val logger = KotlinLogging.logger {}
 
 @Component
 class JwtProvider (private val jwtProperties: JwtProperties) {
     private val secretKey = Keys.hmacShaKeyFor(jwtProperties.secret.toByteArray())
 
-    fun generateToken(username : String, githubId : String, token : String) : String {
+    fun generateToken(githubId : String, username : String, token : String) : String {
         val now = Date()
         val expirationDate = Date(now.time + jwtProperties.expiration) // 10분
         return Jwts.builder()
             .setSubject(githubId)
             .claim("username", username)
+            .claim("id", githubId)
             .claim("token", token)
             .setIssuedAt(now)
             .setExpiration(expirationDate)
@@ -27,10 +31,11 @@ class JwtProvider (private val jwtProperties: JwtProperties) {
 
     fun validToken(token: String) : Boolean {
         return try{
-            val claims = getAllClaims(token)
-            val githubId = claims["id"] as String?
-            val expiration = claims.expiration
-            githubId != null && expiration.after(Date()) // date 보다 expiration 이 앞에 잇음
+            Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+            true
         }catch (e : Exception){
             false
         }

@@ -19,8 +19,4 @@ class UserEntity (
 ){
     constructor() : this(0, "", "", null, null, mutableListOf())
 
-    fun addSubject(subject: Subject) {
-        subjects.add(subject)
-        subject.assignUser(this)
-    }
 }

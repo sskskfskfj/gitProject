@@ -27,11 +27,10 @@ class SuccessHandler (
     ) {
         val customUser = authentication?.principal as CustomOauth2User
         val username = customUser.name
-        val githubId = customUser.attributes["id"].toString()
+        val githubId : String = customUser.attributes["id"].toString()
         val accessToken = customUser.getToken()
 
         val jwt : String = jwtProvider.generateToken(githubId, username, accessToken)
-        logger.info { "successHandler : $jwt" }
 
         val responseDto = ResponseDto(
             status = 200,
@@ -43,7 +42,6 @@ class SuccessHandler (
         response?.contentType = "application/json"
         response?.characterEncoding = "UTF-8"
         response?.writer?.write(json)
-        response?.sendRedirect("/repo/get?number=1")
     }
 
 }
